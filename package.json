@@ -1,0 +1,27 @@
+{
+  "name": "fractures",
+  "version": "1.0.0",
+  "description": "a non-euclidian dungeon crawler",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "dependencies": {
+    "browserify": "^16.5.0",
+    "watchify": "^3.11.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/destinyrose2358/Fractures.git"
+  },
+  "author": "Destiny Rose",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/destinyrose2358/Fractures/issues"
+  },
+  "homepage": "https://github.com/destinyrose2358/Fractures#readme"
+}
