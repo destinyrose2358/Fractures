@@ -6,7 +6,6 @@
   image-rendering: -webkit-optimize-contrast;
   image-rendering: -o-crisp-edges;
   -ms-interpolation-mode: nearest-neighbor;
-  background: blue;
 }
 
 body {
