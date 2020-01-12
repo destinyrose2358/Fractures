@@ -453,8 +453,9 @@ class EdgeSet {
         return new EdgeSet(this.edges.concat(edgeSet.edges));
     }
 
-    randomEdge() {
-        return this.edges[Math.floor(Math.random() * this.edges.length)];
+    randomEdge(minLength = 0) {
+        let edges = this.edges.filter(edge => edge.length >= minLength);
+        return edges[Math.floor(Math.random() * edges.length)];
     }
     
     bounds() {
@@ -526,6 +527,17 @@ class Vector {
             + Math.cos(theta) * (this.y - rotationPoint.y) + rotationPoint.y)
     }
 
+    mirror(center = new Vector(0, 0), reflectionVector = new Vector(1, 0)) {
+        let translatedMirrorPoint = this.minus(center);
+        let translatedVector = reflectionVector.minus(center);
+        let scalar = 2 * (translatedMirrorPoint.dotProduct(translatedVector) / translatedVector.dotProduct(translatedVector));
+        return translatedVector.scale(scalar).minus(translatedMirrorPoint).plus(center);
+    }
+
+    dotProduct(vector) {
+        return this.x * vector.x + this.y * vector.y;
+    }
+
     Random() {
         return new Vector(Math.floor(Math.random() * 30) * 16, Math.floor(Math.random() * 30) * 16)
     }
@@ -538,13 +550,29 @@ class Door {
   constructor(room, edge) {
     //positions {orientation: 0-3 0 top clockwise after, tile: 0 for farthest left or top}
     this.room = room;
-    this.edge = edge
+    this.edge = edge;
     this.connectedDoor = null;
   }
 
-  Random(room, edge) {
-    let doorEdge = edge.RandomSubSegment();
-    return new Door(room, doorEdge);
+  Random(room1, room2) {
+    let edge1 = room1.edges.randomEdge(23);
+    while (room1.edges.isColliding(edge1)) {
+      edge1 = room1.edges.randomEdge(23);
+    }
+    let edge2 = room2.edges.randomEdge(23);
+    while (room2.edges.isColliding(edge2)) {
+      edge2 = room2.edges.randomEdge(23);
+    }
+    let randomLength = Math.floor(Math.random() * (Math.min(edge1.length, edge2.length) - 23)) + 23;
+    let door1Edge = edge1.RandomSubSegment(randomLength);
+    let door2Edge = edge2.RandomSubSegment(randomLength);
+    let door1 = new Door(room1, door1Edge);
+    let door2 = new Door(room2, door2Edge);
+    room1.doors.push(door1);
+    room2.doors.push(door2);
+    door1.connectedDoor = doors.room2;
+    door2.connectedDoor = doors.room1;
+    return doors;
   }
 
   //old code, needs refactored
@@ -933,9 +961,9 @@ const Edge = require("../ray-casting/Edge");
 const EdgeSet = require("../ray-casting/EdgeSet");
 
 class Room {
-  constructor(walls = [], doors = []) {
+  constructor(walls) {
     this.walls = walls; //EdgeSet
-    this.doors = doors;
+    this.doors = [];
     this.entities = [];
     this.update = this.update.bind(this);
   }
@@ -943,12 +971,7 @@ class Room {
   //need to insure each new Door doesnt overlap with the old ones
   randomDoorTo(room) {
     //new door for this
-    let newDoor = Door.Random(this, this.walls.randomEdge());
-    this.doors.push(newDoor);
-
-    //new door for other
-    let otherDoor = Door.Random(this, this.walls.randomEdge());
-    this.doors.push(newDoor)
+    Door.Random(this, room);
   }
 
   GenerateRandom() {
