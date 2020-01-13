@@ -392,6 +392,19 @@ class Player {
     }
   }
 
+  unmove() {
+    let change = { x: 0, y: 0 };
+    ["a", "w", "s", "d"].forEach(button => {
+      if (this.buttons[button]) {
+        const vector = DIRECTIONS[this.orientation][button];
+        change.x -= vector.x;
+        change.y -= vector.y;
+      }
+    });
+    this.position.x = this.position.x + change.x;
+    this.position.y = this.position.y + change.y;
+  }
+
   render(ctx) {
 
   }
@@ -403,6 +416,7 @@ const Vector = require("./Vector");
 
 class Edge {
     constructor(start, end) {
+        console.log(start, end);
         this.start = start;
         this.end = end;
         this.length = start.distance(end);
@@ -419,7 +433,9 @@ class Edge {
         let rCrossS = r.crossProduct(s);
         let t = cDiffA.crossProduct(s) / rCrossS;
         let u = cDiffA.crossProduct(r) / rCrossS;
-        if (t <= 1 && t >= 0 && u <= 1 && u >= 0) return { point: a.plus(r.scale(t)), t};
+        console.log("edge", t, u);
+        if (t === Infinity || t === -Infinity || u === Infinity || u === -Infinity) return true;
+        if (t <= 1 && t >= 0 && u <= 1 && u >= 0) return { point: a.plus(r.scale(t)), t};    
     }
 
     rotate(rotationPoint, theta) {
@@ -439,6 +455,8 @@ class Edge {
 
 module.exports = Edge;
 },{"./Vector":6}],5:[function(require,module,exports){
+const Edge = require("./Edge");
+
 class EdgeSet {
     constructor(edges) {
         this.edges = edges;
@@ -456,6 +474,34 @@ class EdgeSet {
     randomEdge(minLength = 0) {
         let edges = this.edges.filter(edge => edge.length >= minLength);
         return edges[Math.floor(Math.random() * edges.length)];
+    }
+
+    //this function is returning false when it shouldnt
+    inBounds(edgeSet) {
+        //check if point is in aabb, if not then return false
+        if (!this.broadCollisionTest(edgeSet)) {
+            return false;
+        } else {
+            //else check if point is to the right of an odd amount of edges and if not return false
+            let bounds = this.bounds();
+            if (this.isColliding(edgeSet) || edgeSet.vertices().some(vector => {
+                let testEdge = new Edge(vector, new Vector(bounds.right, vector.y));
+                let intersections = 0;
+                this.edges.forEach(edge => {
+                    console.log(testEdge.intersection(edge));
+                    if (!!testEdge.intersection(edge)) intersections++;
+                });
+                return intersections % 2 === 0;
+            })) return false;
+        }
+        return true;    
+    }
+
+    vertices() {
+        let vertices = [];
+        this.edges.forEach(edge => vertices.push(edge.start));
+        // vertices.push(this.edges[this.edges.length - 1].end);
+        return vertices;
     }
     
     bounds() {
@@ -492,7 +538,7 @@ class EdgeSet {
 }
 
 module.exports = EdgeSet;
-},{}],6:[function(require,module,exports){
+},{"./Edge":4}],6:[function(require,module,exports){
 class Vector {
     constructor(x, y) {
         this.x = x;
@@ -548,7 +594,6 @@ module.exports = Vector;
 
 class Door {
   constructor(room, edge) {
-    //positions {orientation: 0-3 0 top clockwise after, tile: 0 for farthest left or top}
     this.room = room;
     this.edge = edge;
     this.connectedDoor = null;
@@ -556,11 +601,11 @@ class Door {
 
   Random(room1, room2) {
     let edge1 = room1.edges.randomEdge(23);
-    while (room1.edges.isColliding(edge1)) {
+    while (room1.doors.some(door => door.edge.intersection(edge1))) {
       edge1 = room1.edges.randomEdge(23);
     }
     let edge2 = room2.edges.randomEdge(23);
-    while (room2.edges.isColliding(edge2)) {
+    while (room2.doors.some(door => door.edge.intersection(edge2))) {
       edge2 = room2.edges.randomEdge(23);
     }
     let randomLength = Math.floor(Math.random() * (Math.min(edge1.length, edge2.length) - 23)) + 23;
